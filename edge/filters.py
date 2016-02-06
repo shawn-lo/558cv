@@ -146,9 +146,9 @@ class Filters():
                     im[y][x] = 0
         return im
 
-    def non_max_suppression(self, im):
-        height, width = im.shape[:2]
-        #aftIm = np.zeros((height, width), dtype='int16')
+    def non_max_suppression(self, befIm):
+        height, width = befIm.shape[:2]
+        aftIm = np.array(befIm, copy=True)
         for y in range(0, height):
             for x in range(0, width):
                 xDeriv = 0
@@ -164,13 +164,13 @@ class Filters():
                     xDeriv = 0
                     yDeriv = 0
                 else:
-                    xDeriv = im[y][x+1] - im[y][x]
-                    yDeriv = im[y+1][x] - im[y][x]
+                    xDeriv = befIm[y][x+1] - befIm[y][x]
+                    yDeriv = befIm[y+1][x] - befIm[y][x]
                 # cal theta
-                #if xDeriv == 0 and yDeriv == 0:
-                    #pass
-                    #im[y][x] = 0
-                if xDeriv == 0 and yDeriv != 0:
+                if xDeriv == 0 and yDeriv == 0:
+                    #xDeriv = 0
+                    aftIm[y][x] = 0
+                elif xDeriv == 0 and yDeriv != 0:
                     theta = np.pi / 2 #same to -pi/2
                 else:
                     theta = np.arctan(yDeriv/xDeriv)
@@ -178,44 +178,45 @@ class Filters():
                 # classify theta
                 # 1, vertical
                 if (theta >= -np.pi/2 and theta < -3*np.pi/8) or (theta >= 3*np.pi/8 and theta < np.pi/2):
-                    if x > 0 and x < width-1:
-                        if im[y][x] < im[y][x+1] or im[y][x] < im[y][x-1]:
-                            im[y][x] = 0
-                    if x == 0 and im[y][x] < im[y][x+1]:
-                        im[y][x] = 0
-                    if x == width-1 and im[y][x] < im[y][x-1]:
-                        im[y][x] = 0
+                    if y > 0 and y < height-1:
+                        if befIm[y][x] < befIm[y+1][x] or befIm[y][x] < befIm[y-1][x]:
+                            aftIm[y][x] = 0
+                    if y == 0 and befIm[y][x] < befIm[y+1][x]:
+                        aftIm[y][x] = 0
+                    if y == height-1 and befIm[y][x] < befIm[y-1][x]:
+                        aftIm[y][x] = 0
                 # 2, horizontal
                 if theta >= -np.pi/8 and theta < np.pi/8:
-                    if y > 0 and y < height-1:
-                        if im[y][x] < im[y+1][x] or im[y][x] < im[y-1][x]:
-                            im[y][x] = 0
-                    if y == 0 and im[y][x] < im[y+1][x]:
-                        im[y][x] = 0
-                    if y == height-1 and im[y][x] < im[y-1][x]:
-                        im[y][x] = 0
+                    if x > 0 and x < width-1:
+                        if befIm[y][x] < befIm[y][x+1] or befIm[y][x] < befIm[y][x-1]:
+                            aftIm[y][x] = 0
+                    if x == 0 and befIm[y][x] < befIm[y][x+1]:
+                        aftIm[y][x] = 0
+                    if x == width-1 and befIm[y][x] < befIm[y][x-1]:
+                        aftIm[y][x] = 0
                 # 3, D1, RU
                 if theta >= -3*np.pi/8 and theta < -np.pi/8:
                     #left side, up side and up-left corner
                     if x > 0 and y > 0:
-                        if im[y][x] < im[y-1][x-1] or im[y][x] < im[y+1][x+1]:
-                            im[y][x] = 0
-                    if (x == 0 and y != 0) or (x != 0 and y == 0):
-                        if im[y][x] < im[y+1][x+1]:
-                            im[y][x] = 0
-                # 4, D2, BR
+                        if befIm[y][x] < befIm[y-1][x+1] or befIm[y][x] < befIm[y+1][x-1]:
+                            aftIm[y][x] = 0
+                    if x == 0 and y != 0:
+                        if befIm[y][x] < befIm[y-1][x+1]:
+                            aftIm[y][x] = 0
+                    if x != 0 and y == 0:
+                        if befIm[y][x] < befIm[y+1][x-1]:
+                            aftIm[y][x] = 0
+                # 4, D2, LU
                 if theta >= np.pi/8 and theta < 3*np.pi/8:
                     #left side, up side and up-left corner
                     if x > 0 and y > 0:
-                        if im[y][x] < im[y+1][x-1] or im[y][x] < im[y-1][x+1]:
-                            im[y][x] = 0
-                    if x == 0 and y != 0:
-                        if im[y][x] < im[y-1][x+1]:
-                            im[y][x] = 0
-                    if x != 0 and y == 0:
-                        if im[y][x] < im[y+1][x-1]:
-                            im[y][x] = 0
-        return im
+                        if befIm[y][x] < befIm[y-1][x-1] or befIm[y][x] < befIm[y+1][x+1]:
+                            aftIm[y][x] = 0
+                    if (x == 0 and y != 0) or (x != 0 and y == 0):
+                        if befIm[y][x] < befIm[y+1][x+1]:
+                            aftIm[y][x] = 0
+        return aftIm
+
 
 
 if __name__ == '__main__':
@@ -232,15 +233,20 @@ if __name__ == '__main__':
     #2, Create Filter instance and filtering images
     f = Filters()
     # do Gaussian filtering, user specified sigma
-    #img0_gaussian = f.gaussian_filtering(im0,3)
-    #img0_sobel = f.sobel_filtering(im0,0)
-    #tarIm0_gaussian = scipy.misc.imsave('./images/kangaroo_gaussian.png', img0_gaussian)
-    testG = np.array(Image.open('./images/kangaroo_gaussian.png'), dtype='int16')
-    testSV = f.sobel_filtering(testG, 0)
-    testSH = f.sobel_filtering(testG, 1)
-    testS = f.sobel_combining(testSV, testSH, 120)
-    test = f.non_max_suppression(testS)
-    scipy.misc.imsave('./images/test_nm.png', test)
-    #tarIm0_sobel = scipy.misc.imsave('./images/kangaroo_sobel.png', img0_sobel)
+    img0_gaussian = f.gaussian_filtering(im1,1)
+    img0_sobel_h = f.sobel_filtering(img0_gaussian,0)
+    img0_sobel_v = f.sobel_filtering(img0_gaussian,1)
+    img0_sobel = f.sobel_combining(img0_sobel_h, img0_sobel_v, 100)
+    img0_nms = f.non_max_suppression(img0_sobel)
+    tarIm0_gaussian = scipy.misc.imsave('./images/kangaroo_gaussian.png', img0_gaussian)
+    tarIm0_sobel = scipy.misc.imsave('./images/kangaroo_sobel.png', img0_sobel)
+    tarIm0_nms = scipy.misc.imsave('./images/kangaroo_nms.png', img0_nms)
+    #testG = np.array(Image.open('./images/kangaroo_gaussian.png'), dtype='int16')
+    #testSV = f.sobel_filtering(testG, 0)
+    #testSH = f.sobel_filtering(testG, 1)
+    #testS = f.sobel_combining(testSV, testSH, 120)
+    #test = f.non_max_suppression(testS)
+    #scipy.misc.imsave('./images/test_nm.png', test)
+
     #sys0_gaussian = ndimage.filters.gaussian_filter(im0,5)
     #tarSys0_gaussian = scipy.misc.imsave('./images/kangaroo_sys.png', sys0_gaussian)
